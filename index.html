@@ -228,10 +228,29 @@ function dingDouble(){
 // Unlock audio on first user touch
 document.addEventListener('touchstart', ()=>{ try{ getAudio(); }catch(e){} }, {once:true});
 
-// ── Storage ───────────────────────────────────────────────────────────────────
+// ── Storage — tries localStorage first, falls back to cookies ─────────────────
 const SK = { history:'fd_history', co2:'fd_co2', o2:'fd_o2', seed:'fd_seed', o2rest:'fd_o2rest' };
-function lsGet(k,fb){ try{ const r=localStorage.getItem(k); return r?JSON.parse(r):fb; }catch{return fb;} }
-function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} }
+
+function lsGet(k, fb){
+  try { const r=localStorage.getItem(k); if(r) return JSON.parse(r); } catch(e){}
+  try {
+    const name=k+'=', ca=document.cookie.split(';');
+    for(let c of ca){
+      c=c.trim();
+      if(c.indexOf(name)===0){ return JSON.parse(decodeURIComponent(c.substring(name.length))); }
+    }
+  } catch(e){}
+  return fb;
+}
+
+function lsSet(k, v){
+  const str=JSON.stringify(v);
+  try { localStorage.setItem(k,str); } catch(e){}
+  try {
+    const exp=new Date(); exp.setFullYear(exp.getFullYear()+10);
+    document.cookie=k+'='+encodeURIComponent(str)+';expires='+exp.toUTCString()+';path=/;SameSite=Lax';
+  } catch(e){}
+}
 
 // ── Table builders (defined first so state init can call them) ────────────────
 function buildCO2(s){
