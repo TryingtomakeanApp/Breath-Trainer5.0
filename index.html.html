@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Breath Trainer">
+<meta name="theme-color" content="#061a1f">
+<title>Breath Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  html, body {
+    background:#061a1f; min-height:100%;
+    font-family:'Quicksand',sans-serif; color:#d4f0ec;
+    -webkit-tap-highlight-color:transparent; overscroll-behavior:none;
+  }
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-thumb { background:rgba(14,159,142,0.22); border-radius:2px; }
+
+  #app {
+    min-height:100vh;
+    background:radial-gradient(ellipse at 30% 0%, #0a2e35 0%, #061a1f 70%);
+    display:flex; flex-direction:column; align-items:center;
+  }
+  #header { width:100%; max-width:480px; padding:28px 22px 0; text-align:center; }
+  #header .sub {
+    font-family:'Nunito',sans-serif; font-size:10px; letter-spacing:0.18em;
+    color:rgba(14,159,142,0.5); margin-bottom:6px; text-transform:uppercase;
+  }
+  #header h1 {
+    font-family:'Nunito',sans-serif; font-size:26px; font-weight:700;
+    background:linear-gradient(135deg,#d4f0ec,#0e9f8e);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text; letter-spacing:0.05em;
+  }
+  .divider { height:1px; background:linear-gradient(to right,transparent,rgba(14,159,142,0.3),transparent); margin:13px 0 0; }
+
+  #tabs { width:100%; max-width:480px; display:flex; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .tab {
+    flex:1; padding:10px 2px; background:transparent; border:none;
+    border-bottom:2px solid transparent; color:rgba(255,255,255,0.35);
+    font-family:'Nunito',sans-serif; font-size:11px; letter-spacing:0.05em; cursor:pointer;
+  }
+  .tab.active { background:rgba(14,159,142,0.14); border-bottom-color:#0e9f8e; color:#d4f0ec; }
+
+  #content { width:100%; max-width:480px; padding:20px 16px 60px; }
+  .screen { display:none; flex-direction:column; gap:16px; }
+  .screen.active { display:flex; }
+
+  .section-head { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .section-head .line-l { height:1px; flex:1; background:linear-gradient(to right,transparent,rgba(14,159,142,0.4)); }
+  .section-head .line-r { height:1px; flex:1; background:linear-gradient(to left,transparent,rgba(14,159,142,0.4)); }
+  .section-head span { font-family:'Nunito',sans-serif; font-size:10px; letter-spacing:0.05em; color:#0e9f8e; white-space:nowrap; }
+
+  /* Big timer display - no ring */
+  .hold-timer-display {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:30px 0;
+  }
+  .hold-time-big {
+    font-family:'Nunito',sans-serif; font-size:72px; font-weight:700;
+    color:#d4f0ec; letter-spacing:0.02em; line-height:1;
+  }
+  .hold-time-label {
+    font-size:11px; color:rgba(255,255,255,0.3); letter-spacing:0.1em;
+  }
+
+  /* Ring (for breathing counter only) */
+  .ring-wrap { position:relative; }
+  .ring-wrap .ring-inner {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+  }
+  .ring-time { font-family:'Nunito',sans-serif; font-size:46px; color:#d4f0ec; letter-spacing:0.02em; line-height:1; }
+  .ring-label { font-size:10px; color:rgba(255,255,255,0.28); letter-spacing:0.08em; margin-top:4px; }
+
+  .stat-strip { display:flex; background:rgba(14,159,142,0.06); border-radius:10px; padding:12px 0; }
+  .stat-cell { flex:1; text-align:center; border-right:1px solid rgba(255,255,255,0.08); }
+  .stat-cell:last-child { border-right:none; }
+  .stat-val { font-family:'Nunito',sans-serif; font-size:15px; color:#0e9f8e; }
+  .stat-lbl { font-size:9px; color:rgba(255,255,255,0.32); letter-spacing:0.06em; margin-top:2px; }
+
+  .btn-big {
+    padding:12px 30px; border-radius:12px; font-family:'Nunito',sans-serif;
+    font-size:13px; font-weight:600; letter-spacing:0.05em; cursor:pointer;
+    border:none; transition:opacity 0.2s;
+  }
+  .btn-big:active { opacity:0.75; }
+  .btn-teal  { background:rgba(14,159,142,0.2);  border:1px solid rgba(14,159,142,0.45);  color:#0e9f8e; }
+  .btn-aqua  { background:rgba(94,207,190,0.2);  border:1px solid rgba(94,207,190,0.45);  color:#5ecfbe; }
+  .btn-red   { background:rgba(248,113,113,0.2); border:1px solid rgba(248,113,113,0.45); color:#f87171; }
+  .btn-coral { background:rgba(240,160,90,0.2);  border:1px solid rgba(240,160,90,0.45);  color:#f0a05a; }
+  .btn-ghost {
+    background:none; border:1px solid rgba(255,255,255,0.12); border-radius:8px;
+    color:rgba(255,255,255,0.38); font-size:12px; cursor:pointer; padding:6px 14px;
+    font-family:'Quicksand',sans-serif;
+  }
+  .btn-sm {
+    width:28px; height:28px; border-radius:6px;
+    background:rgba(14,159,142,0.11); border:1px solid rgba(14,159,142,0.25);
+    color:#0e9f8e; cursor:pointer; font-size:18px;
+    display:inline-flex; align-items:center; justify-content:center; line-height:1;
+  }
+
+  .round-row {
+    display:grid; grid-template-columns:22px 1fr 1fr 28px;
+    gap:6px; align-items:center;
+    background:rgba(255,255,255,0.04); border-radius:10px; padding:8px 6px;
+  }
+  .round-num { font-family:'Nunito',sans-serif; font-size:9px; color:rgba(255,255,255,0.2); text-align:center; }
+  .sec-editor { display:flex; align-items:center; gap:4px; justify-content:center; }
+  .sec-val { font-family:'Nunito',sans-serif; font-size:13px; color:#d4f0ec; min-width:42px; text-align:center; display:inline-block; }
+  .btn-del { background:none; border:none; color:rgba(248,113,113,0.45); cursor:pointer; font-size:20px; line-height:1; }
+
+  /* O2 global rest control */
+  .o2-rest-ctrl {
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(14,159,142,0.07); border:1px solid rgba(14,159,142,0.2);
+    border-radius:10px; padding:10px 16px; margin-bottom:4px;
+  }
+  .o2-rest-label { font-size:11px; color:rgba(255,255,255,0.45); }
+
+  .dots { display:flex; gap:5px; flex-wrap:wrap; justify-content:center; }
+  .dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.1); transition:background 0.3s; }
+  .dot.done { background:#0e9f8e; }
+  .dot.active-hold { background:#5ecfbe; }
+  .dot.active-rest { background:#f0a05a; }
+
+  .hist-row {
+    display:grid; grid-template-columns:26px 1fr 1fr 32px;
+    gap:8px; align-items:center;
+    background:rgba(255,255,255,0.04); border-radius:10px; padding:9px 10px;
+    border:1px solid transparent;
+  }
+  .hist-row.pb { border-color:rgba(94,207,190,0.22); }
+  .hist-num { font-family:'Nunito',sans-serif; font-size:9px; color:rgba(255,255,255,0.2); text-align:center; }
+  .hist-time { font-family:'Nunito',sans-serif; font-size:15px; color:#d4f0ec; }
+  .hist-time.pb { color:#5ecfbe; }
+  .hist-date { font-size:11px; color:rgba(255,255,255,0.28); }
+  .pb-badge { font-size:8px; color:#5ecfbe; margin-left:5px; }
+
+  .seed-panel { background:rgba(240,160,90,0.05); border:1px solid rgba(240,160,90,0.2); border-radius:12px; padding:14px; }
+  .seed-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .seed-title { font-family:'Nunito',sans-serif; font-size:10px; letter-spacing:0.08em; color:#f0a05a; }
+  .seed-current { font-family:'Nunito',sans-serif; font-size:12px; color:#f0a05a; }
+  .seed-desc { font-size:11px; color:rgba(255,255,255,0.38); line-height:1.6; margin-bottom:10px; }
+  .seed-mode-btns { display:flex; gap:8px; margin-bottom:12px; }
+  .seed-mode-btn { flex:1; padding:7px; border-radius:8px; font-size:11px; cursor:pointer; background:transparent; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.35); }
+  .seed-mode-btn.active { background:rgba(240,160,90,0.14); border-color:rgba(240,160,90,0.45); color:#f0a05a; }
+  .custom-time { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .custom-unit { display:flex; align-items:center; gap:6px; }
+  .custom-val { font-family:'Nunito',sans-serif; font-size:13px; color:#d4f0ec; min-width:32px; text-align:center; }
+  .seed-picks { display:flex; gap:6px; flex-wrap:wrap; }
+  .seed-pick-btn { padding:6px 12px; border-radius:8px; font-size:11px; cursor:pointer; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.45); }
+  .seed-pick-btn.active { background:rgba(240,160,90,0.18); border-color:rgba(240,160,90,0.5); color:#f0a05a; }
+  .applied-banner { background:rgba(94,207,190,0.12); border:1px solid rgba(94,207,190,0.3); border-radius:8px; padding:7px 12px; color:#5ecfbe; font-size:11px; margin-bottom:10px; text-align:center; }
+
+  .tbl-info { display:flex; background:rgba(14,159,142,0.06); border-radius:10px; padding:10px 0; margin-bottom:4px; }
+  .center-col { display:flex; flex-direction:column; align-items:center; gap:20px; }
+  .hint { color:rgba(255,255,255,0.45); font-size:13px; text-align:center; line-height:1.7; max-width:290px; }
+  .pb-banner { background:rgba(94,207,190,0.1); border:1px solid rgba(94,207,190,0.3); border-radius:10px; padding:8px 20px; color:#5ecfbe; font-family:'Nunito',sans-serif; font-size:12px; font-weight:600; }
+  .empty-state { text-align:center; padding:28px 0; color:rgba(255,255,255,0.2); font-size:13px; }
+  .row-btns { display:flex; gap:8px; }
+  .col-heads { display:grid; grid-template-columns:22px 1fr 1fr 28px; gap:6px; padding:0 4px; font-size:9px; letter-spacing:0.14em; color:rgba(255,255,255,0.28); text-align:center; }
+  .scrollable { max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; }
+  .scrollable-history { overflow-y:auto; display:flex; flex-direction:column; gap:5px; }
+  .list-footer { display:flex; justify-content:space-between; align-items:center; }
+  .list-count { font-size:11px; color:rgba(255,255,255,0.3); }
+  .btn-danger { color:rgba(248,113,113,0.5); border-color:rgba(248,113,113,0.18); font-size:10px; }
+  .rebuild-row { display:flex; justify-content:flex-end; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="sub">Free Diving</div>
+    <h1>Breath Trainer</h1>
+    <div class="divider"></div>
+  </div>
+  <div id="tabs">
+    <button class="tab active" onclick="showTab('hold')">Hold</button>
+    <button class="tab" onclick="showTab('history')">History</button>
+    <button class="tab" onclick="showTab('co2')">CO₂</button>
+    <button class="tab" onclick="showTab('o2')">O₂</button>
+  </div>
+  <div id="content">
+    <div id="tab-hold" class="screen active">
+      <div class="section-head"><div class="line-l"></div><span>Breath Hold Timer</span><div class="line-r"></div></div>
+      <div class="center-col" id="hold-body"></div>
+    </div>
+    <div id="tab-history" class="screen">
+      <div class="section-head"><div class="line-l"></div><span>Hold History</span><div class="line-r"></div></div>
+      <div id="history-body"></div>
+    </div>
+    <div id="tab-co2" class="screen"><div id="co2-body"></div></div>
+    <div id="tab-o2" class="screen"><div id="o2-body"></div></div>
+  </div>
+</div>
+
+<script>
+// ── Audio ─────────────────────────────────────────────────────────────────────
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudio(){ if(!audioCtx) audioCtx = new AudioCtx(); return audioCtx; }
+
+function playBeep(freq, duration, vol){
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(vol||0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e){}
+}
+
+function dingSingle(){ playBeep(880, 0.4, 0.5); }
+function dingDouble(){
+  playBeep(880, 0.25, 0.5);
+  setTimeout(()=>playBeep(1100, 0.3, 0.6), 300);
+}
+// Unlock audio on first user touch
+document.addEventListener('touchstart', ()=>{ try{ getAudio(); }catch(e){} }, {once:true});
+
+// ── Storage ───────────────────────────────────────────────────────────────────
+const SK = { history:'fd_history', co2:'fd_co2', o2:'fd_o2', seed:'fd_seed', o2rest:'fd_o2rest' };
+function lsGet(k,fb){ try{ const r=localStorage.getItem(k); return r?JSON.parse(r):fb; }catch{return fb;} }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} }
+
+// ── Table builders (defined first so state init can call them) ────────────────
+function buildCO2(s){
+  const hold = Math.max(10, Math.round(s*0.6/5)*5);
+  const restTimes = [105,90,75,60,45,30,15,5];
+  return restTimes.map((rest,i)=>({
+    id: Date.now()+i,
+    holdSec: hold,
+    restSec: rest
+  }));
+}
+function buildO2(s){
+  const restVal = lsGet(SK.o2rest, 120);
+  return Array.from({length:8},(_,i)=>({
+    id: Date.now()+i,
+    holdSec: Math.max(10, Math.round((s*0.4+i*s*0.055)/5)*5),
+    restSec: restVal
+  }));
+}
+
+// ── App state ─────────────────────────────────────────────────────────────────
+let holdHistory = lsGet(SK.history, []);
+let seed        = lsGet(SK.seed, 120);
+let co2rows     = lsGet(SK.co2, null) || buildCO2(120);
+let o2rows      = lsGet(SK.o2,  null) || buildO2(120);
+let o2rest      = lsGet(SK.o2rest, 120);
+let currentTab  = 'hold';
+
+function fmt(sec){
+  const m=Math.floor(Math.abs(sec)/60), s=Math.abs(sec)%60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function fmtDate(ts){
+  return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function getPB(){ return holdHistory.length ? Math.max(...holdHistory.map(h=>h.sec)) : 0; }
+function getAvg(){ return holdHistory.length ? Math.round(holdHistory.reduce((a,h)=>a+h.sec,0)/holdHistory.length) : 0; }
+
+// ── Ring (used for breathing counter + table runner) ──────────────────────────
+function makeRing(size, id){
+  const stroke=10, r=(size-stroke)/2, circ=2*Math.PI*r;
+  return `<div class="ring-wrap" style="width:${size}px;height:${size}px;position:relative;flex-shrink:0;">
+    <svg width="${size}" height="${size}" style="transform:rotate(-90deg);display:block;">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="${stroke}"/>
+      <circle id="ring-arc-${id}" cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+        stroke="url(#rg-${id})" stroke-width="${stroke}"
+        stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+        stroke-linecap="round" style="transition:stroke-dashoffset 0.4s ease;"/>
+      <defs>
+        <linearGradient id="rg-${id}" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#0e9f8e"/>
+          <stop offset="100%" stop-color="#4dd9c8"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="ring-inner" id="ring-inner-${id}"></div>
+  </div>`;
+}
+function setRingProgress(id, progress){
+  const arc=document.getElementById('ring-arc-'+id);
+  if(!arc) return;
+  const r=parseFloat(arc.getAttribute('r')), circ=2*Math.PI*r;
+  arc.style.strokeDashoffset = circ*(1-Math.min(1,Math.max(0,progress)));
+}
+
+function statCell(label,val,color){
+  return `<div class="stat-cell">
+    <div class="stat-val" style="color:${color||'#0e9f8e'}">${val}</div>
+    <div class="stat-lbl">${label}</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HOLD TIMER
+// ══════════════════════════════════════════════════════════════════════════════
+let holdPhase = 'idle';
+let holdElapsed = 0;
+let holdBreaths = 0;
+let holdStart = null;
+let holdInterval = null;
+let holdResult = 0;
+let warnedAt10 = false;
+
+function renderHold(){
+  const body = document.getElementById('hold-body');
+  const pb = getPB();
+
+  if(holdPhase === 'idle'){
+    let statsHtml = '';
+    if(pb > 0){
+      statsHtml = `<div class="stat-strip" style="width:100%">
+        ${statCell('Personal Best', fmt(pb), '#5ecfbe')}
+        ${statCell('Total Holds', holdHistory.length)}
+      </div>`;
+    }
+    body.innerHTML = `
+      <p class="hint">Take 2–3 minutes of slow deep breaths, then tap <strong style="color:#d4f0ec">Start Breathing</strong> to count them.</p>
+      ${statsHtml}
+      <button class="btn-big btn-teal" onclick="holdStartBreathe()">Start Breathing</button>`;
+  }
+
+  else if(holdPhase === 'breathe'){
+    body.innerHTML = `
+      ${makeRing(190,'breathe')}
+      <p style="color:rgba(255,255,255,0.4);font-size:12px;text-align:center;max-width:260px;line-height:1.6;">
+        Breathe slow and full. When ready, take your last breath and hold.
+      </p>
+      <div style="display:flex;gap:12px;">
+        <button class="btn-big btn-teal" onclick="holdAddBreath()">+ Breath</button>
+        <button class="btn-big btn-aqua" onclick="holdStartHold()">▶ Hold</button>
+      </div>
+      <button class="btn-ghost" onclick="holdReset()">Cancel</button>`;
+    updateBreatheRing();
+  }
+
+  else if(holdPhase === 'holding'){
+    body.innerHTML = `
+      <div class="hold-timer-display">
+        <div class="hold-time-big" id="hold-elapsed-display">${fmt(holdElapsed)}</div>
+        <div class="hold-time-label" id="hold-status-label">Holding</div>
+      </div>
+      <span id="hold-pb-line" style="font-size:11px;color:rgba(255,255,255,0.3);">
+        ${pb > 0 ? 'PB: '+fmt(pb) : ''}
+      </span>
+      <button class="btn-big btn-red" onclick="holdStop()">■ Stop</button>`;
+  }
+
+  else if(holdPhase === 'done'){
+    const pb2 = getPB();
+    const isNewPB = holdResult >= pb2 && holdHistory.length >= 1;
+    const pbBanner = isNewPB ? `<div class="pb-banner">🎉 New Personal Best!</div>` : '';
+    body.innerHTML = `
+      <div class="hold-timer-display">
+        <div class="hold-time-big" style="color:#5ecfbe">${fmt(holdResult)}</div>
+        <div class="hold-time-label" style="color:rgba(94,207,190,0.5)">Saved</div>
+      </div>
+      ${pbBanner}
+      <button class="btn-big btn-teal" onclick="holdReset()">Try Again</button>`;
+  }
+}
+
+function holdStartBreathe(){ holdPhase='breathe'; holdBreaths=0; renderHold(); }
+function holdAddBreath(){ holdBreaths++; updateBreatheRing(); }
+function holdReset(){
+  clearInterval(holdInterval); holdPhase='idle'; holdElapsed=0; holdBreaths=0; warnedAt10=false; renderHold();
+}
+function holdStartHold(){
+  holdPhase='holding'; holdElapsed=0; warnedAt10=false;
+  holdStart=Date.now();
+  holdInterval=setInterval(()=>{
+    holdElapsed=Math.floor((Date.now()-holdStart)/1000);
+    updateHoldDisplay();
+  },200);
+  renderHold();
+}
+function holdStop(){
+  clearInterval(holdInterval);
+  holdResult=Math.floor((Date.now()-holdStart)/1000);
+  dingDouble();
+  holdPhase='done';
+  const entry={id:Date.now(), ts:Date.now(), sec:holdResult};
+  holdHistory=[entry,...holdHistory].slice(0,200);
+  lsSet(SK.history,holdHistory);
+  renderHold();
+  if(currentTab==="history") renderHistory();
+}
+function updateBreatheRing(){
+  setRingProgress('breathe',(holdBreaths%10)/10);
+  const inner=document.getElementById('ring-inner-breathe');
+  if(inner) inner.innerHTML=`<span class="ring-time">${holdBreaths}</span><span class="ring-label">Breaths</span>`;
+}
+function updateHoldDisplay(){
+  const el=document.getElementById('hold-elapsed-display');
+  if(el) el.textContent=fmt(holdElapsed);
+  const pb=getPB();
+  const pbLine=document.getElementById('hold-pb-line');
+  if(pbLine && pb>0) pbLine.textContent='PB: '+fmt(pb)+(holdElapsed>=pb?' 🎉':'');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HISTORY TAB
+// ══════════════════════════════════════════════════════════════════════════════
+let seedMode='pick', customMin=2, customSec5=0, confirmClear=false, appliedTimer=null;
+
+function renderHistory(){
+  const body=document.getElementById('history-body');
+  const pb=getPB(), avg=getAvg();
+  let html='';
+
+  if(holdHistory.length>0){
+    html+=`<div class="stat-strip" style="margin-bottom:14px;">
+      ${statCell('Best',fmt(pb),'#5ecfbe')}
+      ${statCell('Average',fmt(avg))}
+      ${statCell('Total',holdHistory.length)}
+    </div>`;
+  }
+
+  html+=`<div class="seed-panel">
+    <div class="seed-header">
+      <span class="seed-title">Table Seed</span>
+      <span class="seed-current">${seed?fmt(seed):'none set'}</span>
+    </div>
+    <p class="seed-desc">Pick a hold time to auto-build your CO₂ and O₂ tables. Useful when returning after a break.</p>
+    <div id="applied-banner" style="display:none" class="applied-banner">✓ Both tables rebuilt from <span id="applied-time"></span></div>
+    <div class="seed-mode-btns">
+      <button class="seed-mode-btn ${seedMode==='pick'?'active':''}" onclick="setSeedMode('pick')">From History</button>
+      <button class="seed-mode-btn ${seedMode==='custom'?'active':''}" onclick="setSeedMode('custom')">Custom Time</button>
+    </div>
+    <div id="seed-content"></div>
+  </div>`;
+
+  if(holdHistory.length>0){
+    const clearHtml=confirmClear
+      ?`<div class="row-btns">
+          <button class="btn-ghost" onclick="setClearConfirm(false)">Cancel</button>
+          <button class="btn-ghost" style="color:#f87171;border-color:rgba(248,113,113,0.4)" onclick="clearAllHistory()">Delete All</button>
+        </div>`
+      :`<button class="btn-ghost btn-danger" onclick="setClearConfirm(true)">Clear All</button>`;
+    html+=`<div class="list-footer" style="margin-top:14px;margin-bottom:8px;">
+      <span class="list-count">${holdHistory.length} holds — tap × to delete</span>${clearHtml}
+    </div><div class="scrollable-history">`;
+    holdHistory.forEach((h,i)=>{
+      const isPB=h.sec===pb;
+      html+=`<div class="hist-row ${isPB?'pb':''}">
+        <span class="hist-num">${holdHistory.length-i}</span>
+        <span class="hist-time ${isPB?'pb':''}">${fmt(h.sec)}${isPB?'<span class="pb-badge">PB</span>':''}</span>
+        <span class="hist-date">${fmtDate(h.ts)}</span>
+        <button class="btn-del" onclick="deleteHistory(${h.id})">×</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  } else {
+    html+=`<div class="empty-state" style="margin-top:14px;">No holds yet. Head to the Hold tab to get started.</div>`;
+  }
+
+  body.innerHTML=html;
+  renderSeedContent();
+}
+
+function renderSeedContent(){
+  const el=document.getElementById('seed-content');
+  if(!el) return;
+  const pb=getPB(), avg=getAvg();
+  if(seedMode==='custom'){
+    el.innerHTML=`<div class="custom-time">
+      <div class="custom-unit">
+        <button class="btn-sm" onclick="adjCustomMin(-1)">−</button>
+        <span class="custom-val">${customMin}m</span>
+        <button class="btn-sm" onclick="adjCustomMin(1)">+</button>
+      </div>
+      <div class="custom-unit">
+        <button class="btn-sm" onclick="adjCustomSec(-5)">−</button>
+        <span class="custom-val">${String(customSec5).padStart(2,'0')}s</span>
+        <button class="btn-sm" onclick="adjCustomSec(5)">+</button>
+      </div>
+      <button class="btn-big btn-coral" style="padding:8px 16px;font-size:11px;" onclick="applyCustomSeed()">Apply & Rebuild</button>
+    </div>`;
+  } else {
+    if(!holdHistory.length){ el.innerHTML=`<p style="font-size:11px;color:rgba(255,255,255,0.28);font-style:italic;">No holds yet.</p>`; return; }
+    const picks=[], seen=new Set();
+    [[pb,'PB'],[avg,'Avg'],[holdHistory[0]?.sec,'Latest']].forEach(([s,lbl])=>{
+      if(s&&!seen.has(s)){ picks.push([s,lbl]); seen.add(s); }
+    });
+    el.innerHTML=`<div class="seed-picks">${picks.map(([s,lbl])=>`
+      <button class="seed-pick-btn ${seed===s?'active':''}" onclick="applySeed(${s})">${fmt(s)} · ${lbl}</button>`).join('')}
+    </div>`;
+  }
+}
+
+function setSeedMode(m){
+  seedMode=m;
+  document.querySelectorAll('.seed-mode-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderSeedContent();
+}
+function adjCustomMin(d){ customMin=Math.max(0,customMin+d); renderSeedContent(); }
+function adjCustomSec(d){ customSec5=Math.max(0,Math.min(55,customSec5+d)); renderSeedContent(); }
+function applyCustomSeed(){ const s=customMin*60+customSec5; if(s<5)return; applySeed(s); }
+function applySeed(s){
+  seed=s; lsSet(SK.seed,s);
+  co2rows=buildCO2(s); lsSet(SK.co2,co2rows);
+  o2rows=buildO2(s);  lsSet(SK.o2,o2rows);
+  if(currentTab==='co2') renderTable('co2');
+  if(currentTab==='o2')  renderTable('o2');
+  const banner=document.getElementById('applied-banner');
+  const timeEl=document.getElementById('applied-time');
+  if(banner){ banner.style.display='block'; if(timeEl) timeEl.textContent=fmt(s); }
+  if(appliedTimer) clearTimeout(appliedTimer);
+  appliedTimer=setTimeout(()=>{ const b=document.getElementById('applied-banner'); if(b) b.style.display='none'; },2500);
+  renderSeedContent();
+  const sc=document.querySelector('.seed-current');
+  if(sc) sc.textContent=fmt(s);
+}
+function deleteHistory(id){ holdHistory=holdHistory.filter(h=>h.id!==id); lsSet(SK.history,holdHistory); renderHistory(); }
+function setClearConfirm(v){ confirmClear=v; renderHistory(); }
+function clearAllHistory(){ holdHistory=[]; lsSet(SK.history,[]); confirmClear=false; renderHistory(); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TABLE EDITOR
+// ══════════════════════════════════════════════════════════════════════════════
+let tableRunning={co2:false,o2:false}, confirmRebuild={co2:false,o2:false};
+
+function renderTable(type){
+  const rows=type==='co2'?co2rows:o2rows;
+  const body=document.getElementById(type+'-body');
+  if(!body) return;
+  if(tableRunning[type]){ renderRunner(type,rows,body); return; }
+
+  const totalSec=rows.reduce((a,r)=>a+r.holdSec+r.restSec,0);
+  const typeLbl=type==='co2'?'CO₂':'O₂';
+  const rebuildBtn=seed
+    ?(confirmRebuild[type]
+      ?`<div class="row-btns" style="justify-content:flex-end;">
+          <button class="btn-ghost" onclick="setConfirmRebuild('${type}',false)">Cancel</button>
+          <button class="btn-ghost" style="color:#f0a05a;border-color:rgba(240,160,90,0.4)" onclick="doRebuild('${type}')">Confirm Rebuild</button>
+        </div>`
+      :`<button class="btn-ghost" style="color:rgba(240,160,90,0.55);border-color:rgba(240,160,90,0.18);font-size:10px;" onclick="setConfirmRebuild('${type}',true)">↺ Rebuild from ${fmt(seed)}</button>`)
+    :'';
+
+  // O2 global rest control
+  const o2ctrl = type==='o2' ? `
+    <div class="o2-rest-ctrl">
+      <span class="o2-rest-label">Rest time (all rounds)</span>
+      <div class="sec-editor">
+        <button class="btn-sm" onclick="adjO2Rest(-5)">−</button>
+        <span class="sec-val" id="o2-global-rest">${fmt(o2rest)}</span>
+        <button class="btn-sm" onclick="adjO2Rest(5)">+</button>
+      </div>
+    </div>` : '';
+
+  // CO2: new round added to TOP, show rest times ascending
+  let rowsHtml='';
+  if(type==='co2'){
+    // display longest rest first (top), shortest last (bottom)
+    [...rows].sort((a,b)=>b.restSec-a.restSec).forEach((row,i)=>{
+      rowsHtml+=`<div class="round-row">
+        <span class="round-num">${i+1}</span>
+        <div class="sec-editor">
+          <button class="btn-sm" onclick="adjRow('co2',${row.id},'holdSec',-5)">−</button>
+          <span class="sec-val" id="co2-hold-${row.id}">${fmt(row.holdSec)}</span>
+          <button class="btn-sm" onclick="adjRow('co2',${row.id},'holdSec',5)">+</button>
+        </div>
+        <div class="sec-editor">
+          <button class="btn-sm" onclick="adjRow('co2',${row.id},'restSec',-5)">−</button>
+          <span class="sec-val" id="co2-rest-${row.id}">${fmt(row.restSec)}</span>
+          <button class="btn-sm" onclick="adjRow('co2',${row.id},'restSec',5)">+</button>
+        </div>
+        <button class="btn-del" ${rows.length<=1?'style="color:rgba(255,255,255,0.1);cursor:default"':''} onclick="removeRow('co2',${row.id})">×</button>
+      </div>`;
+    });
+  } else {
+    rows.forEach((row,i)=>{
+      rowsHtml+=`<div class="round-row">
+        <span class="round-num">${i+1}</span>
+        <div class="sec-editor">
+          <button class="btn-sm" onclick="adjRow('o2',${row.id},'holdSec',-5)">−</button>
+          <span class="sec-val" id="o2-hold-${row.id}">${fmt(row.holdSec)}</span>
+          <button class="btn-sm" onclick="adjRow('o2',${row.id},'holdSec',5)">+</button>
+        </div>
+        <div class="sec-editor" style="opacity:0.35;pointer-events:none;">
+          <button class="btn-sm">−</button>
+          <span class="sec-val">${fmt(row.restSec)}</span>
+          <button class="btn-sm">+</button>
+        </div>
+        <button class="btn-del" ${rows.length<=1?'style="color:rgba(255,255,255,0.1);cursor:default"':''} onclick="removeRow('o2',${row.id})">×</button>
+      </div>`;
+    });
+  }
+
+  body.innerHTML=`
+    <div class="section-head"><div class="line-l"></div><span>${typeLbl} Table</span><div class="line-r"></div></div>
+    <div class="tbl-info">
+      ${statCell('Rounds',rows.length)}
+      ${statCell('Total Time',fmt(totalSec))}
+      ${statCell('Seed',seed?fmt(seed):'—','#f0a05a')}
+    </div>
+    <div class="rebuild-row">${rebuildBtn}</div>
+    ${o2ctrl}
+    <div class="col-heads"><span></span><span>HOLD</span><span>REST</span><span></span></div>
+    <div class="scrollable">${rowsHtml}</div>
+    <button class="btn-ghost" style="width:100%;padding:9px;border-style:dashed;font-size:12px;margin-top:2px;" onclick="addRow('${type}')">+ Add Round</button>
+    <button class="btn-big btn-aqua" style="margin-top:4px;" onclick="startTable('${type}')">▶ Run Table</button>`;
+}
+
+function adjO2Rest(d){
+  o2rest=Math.max(5,o2rest+d);
+  lsSet(SK.o2rest,o2rest);
+  // update all o2 rows
+  o2rows=o2rows.map(r=>({...r,restSec:o2rest}));
+  lsSet(SK.o2,o2rows);
+  const el=document.getElementById('o2-global-rest');
+  if(el) el.textContent=fmt(o2rest);
+  // refresh total
+  const totalSec=o2rows.reduce((a,r)=>a+r.holdSec+r.restSec,0);
+  const strip=document.querySelector('#o2-body .tbl-info');
+  if(strip) strip.innerHTML=`${statCell('Rounds',o2rows.length)}${statCell('Total Time',fmt(totalSec))}${statCell('Seed',seed?fmt(seed):'—','#f0a05a')}`;
+}
+
+function adjRow(type,id,field,delta){
+  const rows=type==='co2'?co2rows:o2rows;
+  const row=rows.find(r=>r.id===id);
+  if(!row) return;
+  row[field]=Math.max(5,row[field]+delta);
+  lsSet(type==='co2'?SK.co2:SK.o2,rows);
+  const el=document.getElementById(`${type}-${field==='holdSec'?'hold':'rest'}-${id}`);
+  if(el) el.textContent=fmt(row[field]);
+  const totalSec=rows.reduce((a,r)=>a+r.holdSec+r.restSec,0);
+  const strip=document.querySelector(`#${type}-body .tbl-info`);
+  if(strip) strip.innerHTML=`${statCell('Rounds',rows.length)}${statCell('Total Time',fmt(totalSec))}${statCell('Seed',seed?fmt(seed):'—','#f0a05a')}`;
+}
+
+function addRow(type){
+  if(type==='co2'){
+    // New round at top with next longer rest interval, pushing all existing down
+    const maxRest=co2rows.length ? Math.max(...co2rows.map(r=>r.restSec)) : 90;
+    const newRest=maxRest+15;
+    const holdVal=co2rows.length ? co2rows[0].holdSec : 60;
+    co2rows.unshift({id:Date.now(), holdSec:holdVal, restSec:newRest});
+    lsSet(SK.co2,co2rows);
+  } else {
+    const last=o2rows[o2rows.length-1];
+    o2rows.push({id:Date.now(), holdSec:last?.holdSec??60, restSec:o2rest});
+    lsSet(SK.o2,o2rows);
+  }
+  renderTable(type);
+}
+
+function removeRow(type,id){
+  if(type==='co2'){ if(co2rows.length<=1)return; co2rows=co2rows.filter(r=>r.id!==id); lsSet(SK.co2,co2rows); }
+  else { if(o2rows.length<=1)return; o2rows=o2rows.filter(r=>r.id!==id); lsSet(SK.o2,o2rows); }
+  renderTable(type);
+}
+function setConfirmRebuild(type,v){ confirmRebuild[type]=v; renderTable(type); }
+function doRebuild(type){
+  if(type==='co2'){ co2rows=buildCO2(seed); lsSet(SK.co2,co2rows); }
+  else { o2rows=buildO2(seed); lsSet(SK.o2,o2rows); }
+  confirmRebuild[type]=false; renderTable(type);
+}
+function startTable(type){ tableRunning[type]=true; renderTable(type); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TABLE RUNNER
+// ══════════════════════════════════════════════════════════════════════════════
+let runnerState={};
+
+function renderRunner(type,rows,body){
+  const rs=runnerState[type]||(runnerState[type]={step:0,phase:'rest',timeLeft:rows[0]?.restSec??120,running:false,done:false,warned:false});
+  if(rs.done){
+    body.innerHTML=`<div class="center-col" style="padding:20px 0;">
+      ${makeRing(180,'run-done-'+type)}
+      <p style="color:rgba(255,255,255,0.45);font-size:13px;text-align:center;">${rows.length} rounds done. Great work!</p>
+      <button class="btn-big btn-teal" onclick="stopTable('${type}')">← Back</button>
+    </div>`;
+    setRingProgress('run-done-'+type,1);
+    const inner=document.getElementById('ring-inner-run-done-'+type);
+    if(inner) inner.innerHTML=`<span style="font-family:'Nunito',sans-serif;font-size:13px;color:#5ecfbe;text-align:center;line-height:1.6;">Table<br>Complete</span>`;
+    return;
+  }
+
+  const row=rows[rs.step]??rows[rows.length-1];
+  const isHold=rs.phase==='hold';
+  const typeLbl=type==='co2'?'CO₂':'O₂';
+  let dots='';
+  rows.forEach((_,i)=>{
+    let cls='dot';
+    if(i<rs.step) cls+=' done';
+    else if(i===rs.step) cls+=(isHold?' active-hold':' active-rest');
+    dots+=`<div class="${cls}"></div>`;
+  });
+
+  body.innerHTML=`
+    <div class="section-head"><div class="line-l"></div><span>${typeLbl} Table</span><div class="line-r"></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn-ghost" onclick="stopTable('${type}')">← Back</button>
+      <span style="font-family:'Nunito',sans-serif;font-size:10px;color:rgba(255,255,255,0.3);">${rs.step+1} / ${rows.length}</span>
+      <span style="width:60px;"></span>
+    </div>
+    <div class="dots" id="runner-dots-${type}">${dots}</div>
+    <div class="center-col">
+      ${makeRing(220,'runner-'+type)}
+      <div class="stat-strip" style="width:200px;">
+        ${statCell('Hold',fmt(row.holdSec))}
+        ${statCell('Rest',fmt(row.restSec))}
+      </div>
+      <button id="runner-btn-${type}" class="btn-big ${rs.running?'btn-red':'btn-teal'}" onclick="toggleRunner('${type}')">
+        ${rs.running?'⏸ Pause':'▶ Start'}
+      </button>
+    </div>`;
+  updateRunnerRing(type);
+}
+
+function updateRunnerRing(type){
+  const rows=type==='co2'?co2rows:o2rows;
+  const rs=runnerState[type];
+  if(!rs) return;
+  const row=rows[rs.step]??rows[rows.length-1];
+  const isHold=rs.phase==='hold';
+  const total=isHold?row.holdSec:row.restSec;
+  setRingProgress('runner-'+type,total>0?rs.timeLeft/total:0);
+  const inner=document.getElementById('ring-inner-runner-'+type);
+  if(inner){
+    inner.innerHTML=`
+      <span class="ring-time" style="color:${isHold?'#5ecfbe':'#f0a05a'};transition:color 0.5s;">${fmt(rs.timeLeft)}</span>
+      <span class="ring-label" style="color:${isHold?'rgba(94,207,190,0.55)':'rgba(240,160,90,0.55)'}">${isHold?'Hold':'Breathe'}</span>`;
+  }
+}
+
+function toggleRunner(type){
+  const rs=runnerState[type]; if(!rs) return;
+  rs.running=!rs.running;
+  const btn=document.getElementById('runner-btn-'+type);
+  if(btn){ btn.className='btn-big '+(rs.running?'btn-red':'btn-teal'); btn.textContent=rs.running?'⏸ Pause':'▶ Start'; }
+  if(rs.running) rs._interval=setInterval(()=>tickRunner(type),1000);
+  else clearInterval(rs._interval);
+}
+
+function tickRunner(type){
+  const rows=type==='co2'?co2rows:o2rows;
+  const rs=runnerState[type];
+  if(!rs||!rs.running) return;
+
+  // 10 second warning ding
+  if(rs.timeLeft===10 && !rs.warned){ dingSingle(); rs.warned=true; }
+
+  if(rs.timeLeft>1){ rs.timeLeft--; updateRunnerRing(type); return; }
+
+  // transition — double ding
+  dingDouble();
+  rs.warned=false;
+
+  if(rs.phase==='rest'){
+    rs.phase='hold';
+    const row=rows[rs.step]??rows[rows.length-1];
+    rs.timeLeft=row.holdSec;
+  } else {
+    const next=rs.step+1;
+    if(next>=rows.length){
+      rs.done=true; rs.running=false; clearInterval(rs._interval);
+      renderTable(type); return;
+    }
+    rs.step=next; rs.phase='rest';
+    const row=rows[rs.step]??rows[rows.length-1];
+    rs.timeLeft=row.restSec;
+  }
+  updateRunnerRing(type);
+  const dotsEl=document.getElementById('runner-dots-'+type);
+  if(dotsEl){
+    const isHold=rs.phase==='hold';
+    let dots='';
+    rows.forEach((_,i)=>{
+      let cls='dot';
+      if(i<rs.step) cls+=' done';
+      else if(i===rs.step) cls+=(isHold?' active-hold':' active-rest');
+      dots+=`<div class="${cls}"></div>`;
+    });
+    dotsEl.innerHTML=dots;
+  }
+}
+
+function stopTable(type){
+  const rs=runnerState[type];
+  if(rs) clearInterval(rs._interval);
+  runnerState[type]=null; tableRunning[type]=false; confirmRebuild[type]=false;
+  renderTable(type);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════════════════════════════════════
+function showTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('#tabs .tab').forEach((b,i)=>{
+    b.classList.toggle('active',['hold','history','co2','o2'][i]===tab);
+  });
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='history') renderHistory();
+  if(tab==='co2') renderTable('co2');
+  if(tab==='o2')  renderTable('o2');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderHold();
+</script>
+</body>
+</html>
