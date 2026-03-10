@@ -228,29 +228,86 @@ function dingDouble(){
 // Unlock audio on first user touch
 document.addEventListener('touchstart', ()=>{ try{ getAudio(); }catch(e){} }, {once:true});
 
-// ── Storage — tries localStorage first, falls back to cookies ─────────────────
+// ── Storage — localStorage with IndexedDB fallback for App Inventor ──────────
 const SK = { history:'fd_history', co2:'fd_co2', o2:'fd_o2', seed:'fd_seed', o2rest:'fd_o2rest' };
 
+// In-memory cache so data is never lost within a session
+const _cache = {};
+
+// IndexedDB setup for App Inventor WebViewer (supports larger data than cookies)
+let _db = null;
+function _openDB(){
+  return new Promise((resolve)=>{
+    if(_db){ resolve(_db); return; }
+    try {
+      const req = indexedDB.open('BreathTrainer', 1);
+      req.onupgradeneeded = e => e.target.result.createObjectStore('kv');
+      req.onsuccess = e => { _db=e.target.result; resolve(_db); };
+      req.onerror = () => resolve(null);
+    } catch(e){ resolve(null); }
+  });
+}
+
 function lsGet(k, fb){
-  try { const r=localStorage.getItem(k); if(r) return JSON.parse(r); } catch(e){}
+  // Return from cache first (fastest, always up to date within session)
+  if(_cache[k] !== undefined) return _cache[k];
+  // Try localStorage
+  try { const r=localStorage.getItem(k); if(r){ const v=JSON.parse(r); _cache[k]=v; return v; } } catch(e){}
+  // Try cookies (small values)
   try {
     const name=k+'=', ca=document.cookie.split(';');
     for(let c of ca){
       c=c.trim();
-      if(c.indexOf(name)===0){ return JSON.parse(decodeURIComponent(c.substring(name.length))); }
+      if(c.indexOf(name)===0){ const v=JSON.parse(decodeURIComponent(c.substring(name.length))); _cache[k]=v; return v; }
     }
   } catch(e){}
   return fb;
 }
 
 function lsSet(k, v){
-  const str=JSON.stringify(v);
-  try { localStorage.setItem(k,str); } catch(e){}
-  try {
-    const exp=new Date(); exp.setFullYear(exp.getFullYear()+10);
-    document.cookie=k+'='+encodeURIComponent(str)+';expires='+exp.toUTCString()+';path=/;SameSite=Lax';
-  } catch(e){}
+  // Always update cache immediately
+  _cache[k] = v;
+  const str = JSON.stringify(v);
+  // localStorage
+  try { localStorage.setItem(k, str); } catch(e){}
+  // Cookie backup (for small values — history can get big so skip)
+  if(str.length < 2000){
+    try {
+      const exp=new Date(); exp.setFullYear(exp.getFullYear()+10);
+      document.cookie=k+'='+encodeURIComponent(str)+';expires='+exp.toUTCString()+';path=/;SameSite=Lax';
+    } catch(e){}
+  }
+  // IndexedDB backup (handles large data, works in App Inventor)
+  _openDB().then(db=>{
+    if(!db) return;
+    try {
+      const tx = db.transaction('kv','readwrite');
+      tx.objectStore('kv').put(str, k);
+    } catch(e){}
+  });
 }
+
+// On startup, load everything from IndexedDB into localStorage if localStorage is empty
+function _syncFromDB(){
+  _openDB().then(db=>{
+    if(!db) return;
+    try {
+      const tx = db.transaction('kv','readonly');
+      Object.values(SK).forEach(k=>{
+        try {
+          const req = tx.objectStore('kv').get(k);
+          req.onsuccess = e => {
+            const val = e.target.result;
+            if(val && !localStorage.getItem(k)){
+              try { localStorage.setItem(k, val); } catch(ex){}
+            }
+          };
+        } catch(ex){}
+      });
+    } catch(e){}
+  });
+}
+_syncFromDB();
 
 // ── Table builders (defined first so state init can call them) ────────────────
 function buildCO2(s){
